@@ -396,6 +396,7 @@ static bool _pumpAction( struct TRACEDecoderEngine *e, struct TRACECPUState *cpu
                         break;
 
                     case 0b10010000 ... 0b10010011: /* Exact Match Address */
+                        ;
                         int match = c & 0x03;
                         assert( c != 3 ); /* This value is reserved */
                         cpu->addr = j->q[match].addr;
