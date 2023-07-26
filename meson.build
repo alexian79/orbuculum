@@ -1,5 +1,5 @@
 
-project('orbuculum', 'c')
+project('orbuculum', 'c', version: '0.0.1')
 
 dependencies = [
     dependency('threads'),
@@ -8,13 +8,13 @@ dependencies = [
     dependency('SDL2'),
     dependency('ncurses', 'ncursesw'),
     dependency('capstone'),
-    dependency('libelf')
+    dependency('libelf'),
+    dependency('libdwarf')
 ]
 
 incdirs = include_directories(['Inc', 'Inc/external'])
 cc = meson.get_compiler('c')
 
-dependencies += cc.find_library('dwarf')
 if host_machine.system() == 'windows'
     winsock2 = cc.find_library('ws2_32')
     dependencies += [

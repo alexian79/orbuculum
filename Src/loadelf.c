@@ -6,7 +6,7 @@
 #include <string.h>
 #include <gelf.h>
 #include <dwarf.h>
-#include <libdwarf/libdwarf.h>
+#include <libdwarf.h>
 
 #include "loadelf.h"
 #include "generics.h"
@@ -270,7 +270,7 @@ static void _processFunctionDie( struct symbol *p, Dwarf_Debug dbg, Dwarf_Die di
     struct symbolFunctionStore *newFunc;
 
 
-    dwarf_highpc ( die, &h, 0 );
+    dwarf_highpc_b ( die, &h, 0, 0, 0 );
     dwarf_lowpc ( die, &l, 0 );
 
     if ( l && ( l != h ) )
@@ -285,7 +285,7 @@ static void _processFunctionDie( struct symbol *p, Dwarf_Debug dbg, Dwarf_Die di
                 Dwarf_Off abstract_origin_offset;
                 Dwarf_Die abstract_origin_die;
                 dwarf_global_formref( attr_data, &abstract_origin_offset, 0 );
-                dwarf_offdie( dbg, abstract_origin_offset, &abstract_origin_die, 0 );
+                dwarf_offdie_b( dbg, abstract_origin_offset, 0, &abstract_origin_die, 0 );
                 dwarf_diename( abstract_origin_die, &name, 0 );
             }
         }
@@ -348,7 +348,7 @@ static void _processDie( struct symbol *p, Dwarf_Debug dbg, Dwarf_Die die, int l
             _processDie( p, dbg, child, level + 1, filenameN, producerN );
 
         }
-        while ( dwarf_siblingof( dbg, child, &child, &err ) == DW_DLV_OK );
+        while ( dwarf_siblingof_b( dbg, child, 0, &child, &err ) == DW_DLV_OK );
     }
 }
 // ====================================================================================================
@@ -364,6 +364,12 @@ static bool _readLines( int fd, struct symbol *p )
     Dwarf_Unsigned next_cu_header = 0;
     Dwarf_Die cu_die;
 
+    Dwarf_Half dw_length_size;
+    Dwarf_Half dw_extension_size;
+    Dwarf_Sig8 dw_type_signature;
+    Dwarf_Unsigned dw_typeoffset;
+    Dwarf_Half dw_header_cu_type;
+
     char *name;
     char *producer;
     char *compdir;
@@ -371,7 +377,7 @@ static bool _readLines( int fd, struct symbol *p )
     unsigned int filenameN;
     unsigned int producerN;
 
-    if ( 0 != dwarf_init( fd, DW_DLC_READ, NULL, NULL, &dbg, &err ) )
+    if ( 0 != dwarf_init_b( fd, DW_GROUPNUMBER_ANY, NULL, NULL, &dbg, &err ) )
     {
         return false;
     }
@@ -384,9 +390,9 @@ static bool _readLines( int fd, struct symbol *p )
 
     /* 1: Collect the functions and lines */
     /* ---------------------------------- */
-    while ( ( 0 == dwarf_next_cu_header( dbg, &cu_header_length, &version_stamp, &abbrev_offset, &address_size, &next_cu_header, &err ) ) )
+    while ( ( 0 == dwarf_next_cu_header_d( dbg, 0, &cu_header_length, &version_stamp, &abbrev_offset, &address_size, &dw_length_size, &dw_extension_size, &dw_type_signature, &dw_typeoffset, &next_cu_header, &dw_header_cu_type, &err ) ) )
     {
-        dwarf_siblingof( dbg, NULL, &cu_die, &err );
+        dwarf_siblingof_b( dbg, NULL, 0, &cu_die, &err );
         dwarf_diename( cu_die, &name, &err );
         dwarf_die_text( cu_die, DW_AT_producer, &producer, &err );
         dwarf_die_text( cu_die, DW_AT_comp_dir, &compdir, &err );
@@ -475,7 +481,7 @@ static bool _readLines( int fd, struct symbol *p )
         }
     }
 
-    dwarf_finish( dbg, 0 );
+    dwarf_finish( dbg );
 
     return true;
 }
