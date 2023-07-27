@@ -285,7 +285,7 @@ static void _processFunctionDie( struct symbol *p, Dwarf_Debug dbg, Dwarf_Die di
                 Dwarf_Off abstract_origin_offset;
                 Dwarf_Die abstract_origin_die;
                 dwarf_global_formref( attr_data, &abstract_origin_offset, 0 );
-                dwarf_offdie_b( dbg, abstract_origin_offset, 0, &abstract_origin_die, 0 );
+                dwarf_offdie_b( dbg, abstract_origin_offset, true, &abstract_origin_die, 0 );
                 dwarf_diename( abstract_origin_die, &name, 0 );
             }
         }
@@ -348,7 +348,7 @@ static void _processDie( struct symbol *p, Dwarf_Debug dbg, Dwarf_Die die, int l
             _processDie( p, dbg, child, level + 1, filenameN, producerN );
 
         }
-        while ( dwarf_siblingof_b( dbg, child, 0, &child, &err ) == DW_DLV_OK );
+        while ( dwarf_siblingof_b( dbg, child, true, &child, &err ) == DW_DLV_OK );
     }
 }
 // ====================================================================================================
@@ -390,9 +390,9 @@ static bool _readLines( int fd, struct symbol *p )
 
     /* 1: Collect the functions and lines */
     /* ---------------------------------- */
-    while ( ( 0 == dwarf_next_cu_header_d( dbg, 0, &cu_header_length, &version_stamp, &abbrev_offset, &address_size, &dw_length_size, &dw_extension_size, &dw_type_signature, &dw_typeoffset, &next_cu_header, &dw_header_cu_type, &err ) ) )
+    while (DW_DLV_OK == dwarf_next_cu_header_d( dbg, true, &cu_header_length, &version_stamp, &abbrev_offset, &address_size, &dw_length_size, &dw_extension_size, &dw_type_signature, &dw_typeoffset, &next_cu_header, &dw_header_cu_type, &err ))
     {
-        dwarf_siblingof_b( dbg, NULL, 0, &cu_die, &err );
+        dwarf_siblingof_b( dbg, NULL, 1, &cu_die, &err );
         dwarf_diename( cu_die, &name, &err );
         dwarf_die_text( cu_die, DW_AT_producer, &producer, &err );
         dwarf_die_text( cu_die, DW_AT_comp_dir, &compdir, &err );
@@ -412,7 +412,7 @@ static bool _readLines( int fd, struct symbol *p )
 
         /* ...and the source lines */
         _getSourceLines( p, dbg, cu_die );
-    }
+        }
 
     /* 2: We have the lines and functions. Clean them up and interlink them so they're useful to applications */
     /* ------------------------------------------------------------------------------------------------------ */
