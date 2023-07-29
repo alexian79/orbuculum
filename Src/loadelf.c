@@ -911,7 +911,7 @@ struct symbol *symbolAqquire( char *filename, bool loadlines, bool loadmem, bool
     int fd;
     struct symbol *p = NULL;
 
-    if ( ( fd = open( filename, O_RDONLY, 0 ) ) < 0 )
+    if ( ( fd = open( filename, O_RDONLY | O_BINARY, 0 ) ) < 0 )
     {
         return NULL;
     }
