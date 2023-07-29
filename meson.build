@@ -17,6 +17,7 @@ cc = meson.get_compiler('c')
 
 if host_machine.system() == 'windows'
     winsock2 = cc.find_library('ws2_32')
+    add_global_arguments('-D_GNU_SOURCE', language: 'c')
     dependencies += [
         winsock2
     ]
