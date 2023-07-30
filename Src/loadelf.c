@@ -19,6 +19,23 @@
 // ====================================================================================================
 // ====================================================================================================
 // ====================================================================================================
+static void* trace_realloc(void* m, size_t s)
+{
+    void* n = m;
+    void* p = realloc( m, s );
+    if (p != n)
+    {
+        //printf("old x%p, new x%p, %lld\n", n, p, s);
+    }
+    return p;
+}
+
+static const char* trace_strdup(const char* m)
+{
+    return strdup(m);
+}
+
+extern size_t getline(char **lineptr, size_t *n, FILE *stream);
 
 static int _compareMem( const void *a, const void *b )
 {
@@ -174,13 +191,13 @@ static bool _readProg( int fd, struct symbol *p )
             /* This is program code or data; Allocate a new section */
             if ( ( data = elf_rawdata ( scn, data ) ) != NULL )
             {
-                p->mem = ( struct symbolMemoryStore * )realloc( p->mem, ( p->nsect_mem + 1 ) * sizeof( struct symbolMemoryStore ) );
+                p->mem = ( struct symbolMemoryStore * )trace_realloc( p->mem, ( p->nsect_mem + 1 ) * sizeof( struct symbolMemoryStore ) );
                 struct symbolMemoryStore *n = p->mem + p->nsect_mem;
                 p->nsect_mem++;
 
                 n->start = shdr.sh_addr;
                 n->len   = shdr.sh_size;
-                n->name  = strdup( name );
+                n->name  = trace_strdup( name );
                 n->data  = ( uint8_t * )malloc( n->len );
                 memmove( n->data, data->d_buf, n->len );
             }
@@ -209,8 +226,8 @@ int _findOrAddString( const char *stringToFindorAdd, char ***table, unsigned int
     }
 
     /* This string doesn't exist...add it and then return the index */
-    *table = ( char ** )realloc( *table, sizeof( char * ) * ( ( *elementCount ) + 1 ) );
-    ( *table )[*elementCount] = strdup( stringToFindorAdd );
+    *table = ( char ** )trace_realloc( *table, sizeof( char * ) * ( ( *elementCount ) + 1 ) );
+    ( *table )[*elementCount] = trace_strdup( stringToFindorAdd );
 
     ( *elementCount )++;
     return ( *elementCount ) - 1;
@@ -244,7 +261,7 @@ static void _getSourceLines( struct symbol *p, Dwarf_Debug dbg, Dwarf_Die die )
             dwarf_lineaddr( linebuf[i], &line_addr, 0 );
             dwarf_linesrc( linebuf[i], &file_name, 0 );
 
-            p->line = ( struct symbolLineStore ** )realloc( p->line, sizeof( struct symbolLineStore * ) * ( p->nlines + 1 ) );
+            p->line = ( struct symbolLineStore ** )trace_realloc( p->line, sizeof( struct symbolLineStore * ) * ( p->nlines + 1 ) );
             struct symbolLineStore *newLine = p->line[p->nlines] = ( struct symbolLineStore * )calloc( 1, sizeof( struct symbolLineStore ) );
             p->nlines++;
             newLine->startline = line_num;
@@ -290,11 +307,11 @@ static void _processFunctionDie( struct symbol *p, Dwarf_Debug dbg, Dwarf_Die di
             }
         }
 
-        p->func = ( struct symbolFunctionStore ** )realloc( p->func, sizeof( struct symbolFunctionStore * ) * ( p->nfunc + 1 ) );
+        p->func = ( struct symbolFunctionStore ** )trace_realloc( p->func, sizeof( struct symbolFunctionStore * ) * ( p->nfunc + 1 ) );
         newFunc = p->func[p->nfunc] = ( struct symbolFunctionStore * )calloc( 1, sizeof( struct symbolFunctionStore ) );
         p->nfunc++;
 
-        newFunc->funcname  = strdup( name );
+        newFunc->funcname  = trace_strdup( name );
         newFunc->producer  = producerN;
         newFunc->filename  = filenameN;
         newFunc->lowaddr   = l;
@@ -475,7 +492,7 @@ static bool _readLines( int fd, struct symbol *p )
 
         if ( f )
         {
-            f->line = ( struct symbolLineStore ** )realloc( f->line, sizeof( struct symbolLineStore * ) * ( f->nlines + 1 ) );
+            f->line = ( struct symbolLineStore ** )trace_realloc( f->line, sizeof( struct symbolLineStore * ) * ( f->nlines + 1 ) );
             f->line[f->nlines] = p->line[i];
             f->nlines++;
         }
@@ -533,12 +550,13 @@ static bool _loadSource( struct symbol *p )
 
         /* Create an entry for this file. It will be zero (NULL) if there are no lines in it */
         struct symbolSourcecodeStore *store = p->source[i] = ( struct symbolSourcecodeStore * )calloc( 1, sizeof( struct symbolSourcecodeStore ) );
-
         while ( !feof( fd ) )
         {
-            /* Add this line to the storage. We strdup the line storage because the getline call tends to be too generous */
-            store->linetext = ( char ** )realloc( store->linetext, sizeof( char * ) * ( store->nlines + 1 ) );
-            store->linetext[store->nlines++] = strdup( w );
+            /* Add this line to the storage. We trace_strdup the line storage because the getline call tends to be too generous */
+            store->nlines += 1;
+            store->linetext = ( char ** )trace_realloc( store->linetext, sizeof( char * ) * ( store->nlines ) );
+            //printf("nlines %d\n", store->nlines);
+            store->linetext[store->nlines-1] = trace_strdup( w );
             getline( &w, &m, fd );
         }
 
